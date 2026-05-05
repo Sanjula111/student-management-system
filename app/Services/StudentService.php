@@ -96,34 +96,34 @@ class StudentService
 
     /**
      * Delete a student and remove their image from storage.
-     */$result = $student->delete();
-        
-        // Broadcast event for real-time updates
-        StudentDeleted::dispatch($id);
-        
-        return $result
+     */
     public function delete(int $id): bool
     {
         $student = $this->find($id);
         $this->removeImage($student->image);
-        return $student->delete();
+        $result = $student->delete();
+
+        // Broadcast event for real-time updates
+        StudentDeleted::dispatch($id);
+
+        return $result;
     }
 
     /**
      * Toggle student status between active ↔ inactive.
      */
     public function toggleStatus(int $id): Student
-    {$student = $student->fresh();
-        
-        // Broadcast event for real-time updates
-        StudentUpdated::dispatch($student);
-        
-        return $student
+    {
         $student = $this->find($id);
         $student->update([
             'status' => $student->status === 'active' ? 'inactive' : 'active',
         ]);
-        return $student->fresh();
+        $student = $student->fresh();
+
+        // Broadcast event for real-time updates
+        StudentUpdated::dispatch($student);
+
+        return $student;
     }
 
     // ─────────────────────────────────────────
