@@ -1,11 +1,74 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { showToast } from '@/Components/Toast';
 
-export default function Index({ students, stats }) {
+export default function Index({ students: initialStudents, stats: initialStats }) {
+    const [students, setStudents] = useState(initialStudents.data);
+    const [stats, setStats] = useState(initialStats);
     const [search, setSearch] = useState('');
+    const [total, setTotal] = useState(initialStudents.total);
 
-    const filtered = students.data.filter(s =>
+    useEffect(() => {
+        // Only listen if Echo is available
+        if (!window.Echo) return;
+
+        // Subscribe to the students channel
+        const channel = window.Echo.channel('students');
+
+        // Listen for new student created
+        channel.listen('StudentCreated', (event) => {
+            const newStudent = event;
+            // Add to top of list
+            setStudents(prev => [newStudent, ...prev]);
+            setTotal(prev => prev + 1);
+            setStats(prev => ({ ...prev, total: prev.total + 1 }));
+            showToast(`✅ ${newStudent.name} added by another user!`, 'success');
+        });
+
+        // Listen for student deleted
+        channel.listen('StudentDeleted', (event) => {
+            const deletedId = event.id;
+            // Remove from list
+            setStudents(prev => prev.filter(s => s.id !== deletedId));
+            setTotal(prev => prev - 1);
+            setStats(prev => ({ ...prev, total: prev.total - 1 }));
+            showToast('🗑️ Student deleted!', 'info');
+        });
+
+        // Listen for student updated
+        channel.listen('StudentUpdated', (event) => {
+            const updatedStudent = event;
+            // Update in list
+            setStudents(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+            
+            // Update stats if status changed
+            const oldStudent = students.find(s => s.id === updatedStudent.id);
+            if (oldStudent && oldStudent.status !== updatedStudent.status) {
+                setStats(prev => {
+                    const newStats = { ...prev };
+                    if (updatedStudent.status === 'active') {
+                        newStats.active = (newStats.active || 0) + 1;
+                        newStats.inactive = Math.max(0, (newStats.inactive || 0) - 1);
+                    } else {
+                        newStats.inactive = (newStats.inactive || 0) + 1;
+                        newStats.active = Math.max(0, (newStats.active || 0) - 1);
+                    }
+                    return newStats;
+                });
+                showToast(`🔄 ${updatedStudent.name} status changed!`, 'info');
+            } else {
+                showToast(`✏️ ${updatedStudent.name} updated!`, 'info');
+            }
+        });
+
+        // Cleanup on component unmount
+        return () => {
+            window.Echo.leaveChannel('students');
+        };
+    }, []);
+
+    const filtered = students.filter(s =>
         s.name.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -39,7 +102,7 @@ export default function Index({ students, stats }) {
             {/* Mini stat bar */}
             <div className="mini-stats">
                 {[
-                    { label: 'Total', value: stats?.total ?? students.total, color: '#3949ab', bg: '#eef0fb', icon: '📊' },
+                    { label: 'Total', value: total, color: '#3949ab', bg: '#eef0fb', icon: '📊' },
                     { label: 'Active', value: stats?.active ?? '—', color: '#00897b', bg: '#e0f2f1', icon: '✅' },
                     { label: 'Inactive', value: stats?.inactive ?? '—', color: '#e53935', bg: '#fce4ec', icon: '⏸' },
                 ].map(s => (
@@ -68,7 +131,7 @@ export default function Index({ students, stats }) {
                         />
                     </div>
                     <div style={{ fontSize: '13px', color: '#94a3b8' }}>
-                        {filtered.length} of {students.total} records
+                        {filtered.length} of {total} records
                     </div>
                 </div>
 
@@ -98,7 +161,7 @@ export default function Index({ students, stats }) {
                             <tbody>
                                 {filtered.map((s, i) => (
                                     <tr key={s.id} className="student-row">
-                                        <td className="cell-num">{(students.current_page - 1) * students.per_page + i + 1}</td>
+                                        <td className="cell-num">{filtered.indexOf(s) + 1}</td>
                                         <td>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 {s.image_url
@@ -138,18 +201,11 @@ export default function Index({ students, stats }) {
                 )}
 
                 {/* Pagination */}
-                {students.last_page > 1 && (
+                {false && (
                     <div className="pagination-bar">
                         <span className="pagination-info">
-                            Showing {(students.current_page - 1) * students.per_page + 1}–{Math.min(students.current_page * students.per_page, students.total)} of <strong>{students.total}</strong>
+                            Showing — of <strong>{total}</strong>
                         </span>
-                        <div className="pagination-links">
-                            {students.links.map((link, i) =>
-                                link.url
-                                    ? <Link key={i} href={link.url} className={`page-btn ${link.active ? 'active' : ''}`} dangerouslySetInnerHTML={{ __html: link.label }} />
-                                    : <span key={i} className="page-btn disabled" dangerouslySetInnerHTML={{ __html: link.label }} />
-                            )}
-                        </div>
                     </div>
                 )}
             </div>

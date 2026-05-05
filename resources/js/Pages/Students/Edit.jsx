@@ -1,23 +1,66 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useRef, useState } from 'react';
+import { showToast } from '@/Components/Toast';
 
 export default function Edit({ student }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const [data, setData] = useState({
         name: student.name || '', image: null,
-        age: student.age || '', status: student.status || 'active', _method: 'PUT',
+        age: student.age || '', status: student.status || 'active',
     });
+    const [errors, setErrors] = useState({});
     const [preview, setPreview] = useState(null);
     const [drag, setDrag] = useState(false);
+    const [processing, setProcessing] = useState(false);
     const fileRef = useRef();
 
     const pickFile = (file) => {
         if (!file) return;
-        setData('image', file);
-        const r = new FileReader(); r.onloadend = () => setPreview(r.result); r.readAsDataURL(file);
+        setData(prev => ({ ...prev, image: file }));
+        const r = new FileReader();
+        r.onloadend = () => setPreview(r.result);
+        r.readAsDataURL(file);
     };
 
-    const submit = (e) => { e.preventDefault(); post(route('students.update', student.id), { forceFormData: true }); };
+    const submit = async (e) => {
+        e.preventDefault();
+        setProcessing(true);
+        setErrors({});
+
+        const formData = new FormData();
+        formData.append('name', data.name);
+        formData.append('age', data.age);
+        formData.append('status', data.status);
+        if (data.image) {
+            formData.append('image', data.image);
+        }
+
+        try {
+            const response = await fetch(route('students.update', student.id), {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                setErrors(result.errors || {});
+                showToast('❌ ' + (result.message || 'Error updating student'), 'error');
+            } else {
+                showToast('✅ Student updated successfully!', 'success');
+                setTimeout(() => window.location.href = route('students.index'), 1500);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('❌ Network error. Please try again.', 'error');
+        } finally {
+            setProcessing(false);
+        }
+    };
 
     const displayImg = preview || student.image_url;
 
@@ -54,7 +97,7 @@ export default function Edit({ student }) {
                                 <div className="fld-wrap">
                                     <span className="fld-icon">👤</span>
                                     <input type="text" className={`fld-input ${errors.name?'err':''}`}
-                                        value={data.name} onChange={e=>setData('name',e.target.value)} autoFocus />
+                                        value={data.name} onChange={e=>setData(prev => ({ ...prev, name: e.target.value }))} autoFocus />
                                 </div>
                                 {errors.name && <span className="fld-err">⚠ {errors.name}</span>}
                             </div>
@@ -63,7 +106,7 @@ export default function Edit({ student }) {
                                 <div className="fld-wrap">
                                     <span className="fld-icon">🎂</span>
                                     <input type="number" className={`fld-input ${errors.age?'err':''}`}
-                                        value={data.age} onChange={e=>setData('age',e.target.value)} min="1" max="120" />
+                                        value={data.age} onChange={e=>setData(prev => ({ ...prev, age: e.target.value }))} min="1" max="120" />
                                 </div>
                                 {errors.age && <span className="fld-err">⚠ {errors.age}</span>}
                             </div>
@@ -73,7 +116,7 @@ export default function Edit({ student }) {
                             <label className="fld-label">Status <span className="req">*</span></label>
                             <div style={{ display:'flex', gap:'10px' }}>
                                 {['active','inactive'].map(s => (
-                                    <label key={s} className={`status-opt ${data.status===s?'selected':''}`} onClick={()=>setData('status',s)}>
+                                    <label key={s} className={`status-opt ${data.status===s?'selected':''}`} onClick={()=>setData(prev => ({ ...prev, status: s }))}>
                                         <span>{s==='active'?'✅':'⏸'}</span>
                                         <span style={{ textTransform:'capitalize', fontWeight:600 }}>{s}</span>
                                     </label>

@@ -1,0 +1,81 @@
+# Broadcasting Configuration Examples
+
+## Option 1: Local Development with Laravel Reverb
+
+```env
+BROADCAST_DRIVER=reverb
+REVERB_APP_ID=12345
+REVERB_APP_KEY=your-reverb-key
+REVERB_APP_SECRET=your-reverb-secret
+REVERB_HOST=localhost
+REVERB_PORT=8080
+REVERB_SCHEME=http
+
+# Optional: For WebSocket proxy
+VITE_REVERB_HOST=localhost
+VITE_REVERB_PORT=8080
+VITE_REVERB_SCHEME=ws
+```
+
+## Option 2: Production with Pusher
+
+```env
+BROADCAST_DRIVER=pusher
+PUSHER_APP_ID=123456
+PUSHER_APP_KEY=your-pusher-key
+PUSHER_APP_SECRET=your-pusher-secret
+PUSHER_APP_CLUSTER=mt1
+
+# Frontend configuration (these are public)
+VITE_PUSHER_APP_KEY=your-pusher-key
+VITE_PUSHER_APP_CLUSTER=mt1
+VITE_BROADCAST_DRIVER=pusher
+```
+
+## Option 3: Development without Broadcasting (Fallback)
+
+```env
+BROADCAST_DRIVER=null
+```
+
+## Pusher Setup
+
+1. Sign up at https://pusher.com
+2. Create a new app
+3. Go to "App Keys"
+4. Copy and paste the credentials above
+5. Your cluster will be shown (e.g., "mt1", "us2", "ap1")
+
+## Laravel Reverb Setup
+
+1. Install: `composer require laravel/reverb`
+2. Publish config: `php artisan vendor:publish --provider="Laravel\Reverb\ReverberServiceProvider"`
+3. Generate keys: `php artisan reverb:install`
+4. Start server: `php artisan reverb:start`
+
+The Reverb installation will auto-generate app keys and store them in `.env`.
+
+## Testing Broadcasting
+
+```bash
+# Test with artisan tinker
+php artisan tinker
+
+# Dispatch a test event
+event(new App\Events\StudentCreated(\App\Models\Student::first()));
+```
+
+## Debugging
+
+Enable debug mode for WebSocket connections:
+
+```env
+BROADCAST_DRIVER=reverb
+LOG_CHANNEL=stack
+LOG_LEVEL=debug
+```
+
+Watch logs:
+```bash
+tail -f storage/logs/laravel.log
+```
