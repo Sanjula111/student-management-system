@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Events\StudentCreated;
+use App\Events\StudentDeleted;
+use App\Events\StudentUpdated;
 use App\Models\Student;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -60,7 +63,12 @@ class StudentService
             $data['image'] = $this->storeImage($data['image']);
         }
 
-        return Student::create($data);
+        $student = Student::create($data);
+        
+        // Broadcast event for real-time updates
+        StudentCreated::dispatch($student);
+        
+        return $student;
     }
 
     /**
@@ -78,12 +86,22 @@ class StudentService
         }
 
         $student->update($data);
-        return $student->fresh();
+        $student = $student->fresh();
+        
+        // Broadcast event for real-time updates
+        StudentUpdated::dispatch($student);
+        
+        return $student;
     }
 
     /**
      * Delete a student and remove their image from storage.
-     */
+     */$result = $student->delete();
+        
+        // Broadcast event for real-time updates
+        StudentDeleted::dispatch($id);
+        
+        return $result
     public function delete(int $id): bool
     {
         $student = $this->find($id);
@@ -95,7 +113,12 @@ class StudentService
      * Toggle student status between active ↔ inactive.
      */
     public function toggleStatus(int $id): Student
-    {
+    {$student = $student->fresh();
+        
+        // Broadcast event for real-time updates
+        StudentUpdated::dispatch($student);
+        
+        return $student
         $student = $this->find($id);
         $student->update([
             'status' => $student->status === 'active' ? 'inactive' : 'active',
