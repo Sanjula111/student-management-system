@@ -2,151 +2,75 @@
 
 namespace App\Services;
 
-use App\Events\StudentCreated;
-use App\Events\StudentDeleted;
-use App\Events\StudentUpdated;
 use App\Models\Student;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Storage;   // Laravel Facade: Storage
-use Illuminate\Support\Facades\DB;        // Laravel Facade: DB
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class StudentService
 {
-    /**
-     * Return paginated students, newest first.
-     */
-    public function getAll(int $perPage = 10): LengthAwarePaginator
+    public function getAll(int $perPage = 10)
     {
-        // Using the DB Facade indirectly through Eloquent
         return Student::latest()->paginate($perPage);
     }
 
-    /**
-     * Total count of all students.
-     */
-    public function totalCount(): int
+    public function search(string $query, int $perPage = 10)
     {
-        return DB::table('students')->count();
+        return Student::where('name', 'like', "%{$query}%")
+            ->orWhere('id', $query)
+            ->orWhere('age', $query)
+            ->orWhere('status', 'like', "%{$query}%")
+            ->latest()
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
-    /**
-     * Count active students.
-     */
-    public function activeCount(): int
+    public function totalCount(): int    { return DB::table('students')->count(); }
+    public function activeCount(): int   { return DB::table('students')->where('status', 'active')->count(); }
+    public function inactiveCount(): int { return DB::table('students')->where('status', 'inactive')->count(); }
+
+    public function newThisMonth(): int
     {
-        return DB::table('students')->where('status', 'active')->count();
+        return DB::table('students')
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
     }
 
-    /**
-     * Count inactive students.
-     */
-    public function inactiveCount(): int
-    {
-        return DB::table('students')->where('status', 'inactive')->count();
-    }
+    public function find(int $id): Student  { return Student::findOrFail($id); }
 
-    /**
-     * Find a single student by ID or throw 404.
-     */
-    public function find(int $id): Student
-    {
-        return Student::findOrFail($id);
-    }
-
-    /**
-     * Create a new student record with optional image upload.
-     */
     public function create(array $data): Student
     {
         if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
-            $data['image'] = $this->storeImage($data['image']);
+            $data['image'] = $data['image']->store('students', 'public');
         }
-
-        $student = Student::create($data);
-        
-        // Broadcast event for real-time updates
-        StudentCreated::dispatch($student);
-        
-        return $student;
+        return Student::create($data);
     }
 
-    /**
-     * Update an existing student, replacing image if a new one is uploaded.
-     */
     public function update(int $id, array $data): Student
     {
         $student = $this->find($id);
-
         if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
-            $this->removeImage($student->image);
-            $data['image'] = $this->storeImage($data['image']);
+            if ($student->image) Storage::disk('public')->delete($student->image);
+            $data['image'] = $data['image']->store('students', 'public');
         } else {
-            unset($data['image']); // keep existing image
+            unset($data['image']);
         }
-
         $student->update($data);
-        $student = $student->fresh();
-        
-        // Broadcast event for real-time updates
-        StudentUpdated::dispatch($student);
-        
-        return $student;
+        return $student->fresh();
     }
 
-    /**
-     * Delete a student and remove their image from storage.
-     */
     public function delete(int $id): bool
     {
         $student = $this->find($id);
-        $this->removeImage($student->image);
-        $result = $student->delete();
-
-        // Broadcast event for real-time updates
-        StudentDeleted::dispatch($id);
-
-        return $result;
+        if ($student->image) Storage::disk('public')->delete($student->image);
+        return $student->delete();
     }
 
-    /**
-     * Toggle student status between active ↔ inactive.
-     */
     public function toggleStatus(int $id): Student
     {
         $student = $this->find($id);
-        $student->update([
-            'status' => $student->status === 'active' ? 'inactive' : 'active',
-        ]);
-        $student = $student->fresh();
-
-        // Broadcast event for real-time updates
-        StudentUpdated::dispatch($student);
-
-        return $student;
-    }
-
-    // ─────────────────────────────────────────
-    // Private helpers
-    // ─────────────────────────────────────────
-
-    /**
-     * Store an uploaded image in the public disk under students/.
-     * Uses the Storage Facade.
-     */
-    private function storeImage(UploadedFile $file): string
-    {
-        return $file->store('students', 'public'); // Storage Facade
-    }
-
-    /**
-     * Delete an image file from the public disk.
-     * Uses the Storage Facade.
-     */
-    private function removeImage(?string $path): void
-    {
-        if ($path && Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path); // Storage Facade
-        }
+        $student->update(['status' => $student->status === 'active' ? 'inactive' : 'active']);
+        return $student->fresh();
     }
 }
