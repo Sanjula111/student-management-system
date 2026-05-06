@@ -71,8 +71,8 @@ export default function AuthenticatedLayout({ children }) {
         { href: route('dashboard'),       label: 'Dashboard',    icon: <IconGrid />,     name: 'dashboard' },
         { href: route('students.index'),  label: 'All Students', icon: <IconUsers />,    name: 'students'  },
         { href: route('students.create'), label: 'Add Student',  icon: <IconPlus />,     name: 'create'    },
-        { href: '#', label: 'Reports',   icon: <IconReport />,   name: 'reports',  disabled: true },
-        { href: '#', label: 'Settings',  icon: <IconSettings />, name: 'settings', disabled: true },
+        { href: '/reports', label: 'Reports',   icon: <IconReport />,   name: 'reports' },
+        { href: '/settings', label: 'Settings',  icon: <IconSettings />, name: 'settings' },
     ];
     const isActive = (n) => {
         if (n === 'dashboard') return route().current('dashboard');

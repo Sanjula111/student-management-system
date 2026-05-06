@@ -17,7 +17,13 @@ export default function Edit({ student }) {
         const r = new FileReader(); r.onloadend = () => setPreview(r.result); r.readAsDataURL(file);
     };
     const submit = (e) => { e.preventDefault(); post(route('students.update', student.id), { forceFormData:true }); };
-    const displayImg = preview || student.image_url;
+    
+    const getImageUrl = (imageUrl) => {
+        if (!imageUrl) return null;
+        if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
+        return `/storage/${imageUrl}`;
+    };
+    const displayImg = preview || getImageUrl(student.image_url);
 
     return (
         <AuthenticatedLayout>
