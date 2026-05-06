@@ -2,6 +2,8 @@
 
 use App\Facades\StudentFacade;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ExportController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -29,6 +31,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{id}',       'destroy')->name('destroy');
         Route::patch('/{id}/status', 'toggleStatus')->name('status');
     });
+
+    Route::get('/reports',               [ReportController::class, 'index'])->name('reports.index');
+    Route::post('/reports/generate',     [ReportController::class, 'generate'])->name('reports.generate');
+    Route::get('/reports/download-pdf',  [ReportController::class, 'downloadPdf'])->name('reports.download-pdf');
+
+    Route::get('/export-data',           [ExportController::class, 'index'])->name('export.index');
+    Route::post('/export-data/download', [ExportController::class, 'download'])->name('export.download');
 
 });
 

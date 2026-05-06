@@ -220,10 +220,10 @@ export default function Dashboard() {
                 <div className="chart-title" style={{ marginBottom:'14px' }}>Quick Actions</div>
                 <div className="qa-grid">
                     {[
-                        { href:route('students.create'), icon:'+', label:'Add New Student',  sub:'Register a new student',  ib:'#e8f5e9', ic:'#388e3c', link:true },
-                        { href:route('students.index'),  icon:'👥',label:'View All Students',sub:'Browse all students',      ib:'#e3f2fd', ic:'#1976d2', link:true },
-                        { href:'#', icon:'📊', label:'Generate Report', sub:'View detailed reports', ib:'#fff3e0', ic:'#f57c00', link:false },
-                        { href:'#', icon:'⬇',  label:'Export Data',    sub:'Download student data',  ib:'#f3e5f5', ic:'#7b1fa2', link:false },
+                        { href:'/students/create', icon:'+', label:'Add New Student',  sub:'Register a new student',  ib:'#e8f5e9', ic:'#388e3c', link:true },
+                        { href:'/students',  icon:'👥',label:'View All Students',sub:'Browse all students',      ib:'#e3f2fd', ic:'#1976d2', link:true },
+                        { href:'/reports', icon:'📊', label:'Generate Report', sub:'View detailed reports', ib:'#fff3e0', ic:'#f57c00', link:true },
+                        { href:'/export-data',  icon:'⬇',  label:'Export Data',    sub:'Download student data',  ib:'#f3e5f5', ic:'#7b1fa2', link:true },
                     ].map(a => a.link
                         ? <Link key={a.label} href={a.href} className="qa-btn">
                               <div className="qa-ico" style={{background:a.ib,color:a.ic}}>{a.icon}</div>
