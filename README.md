@@ -20,6 +20,7 @@ A Laravel 13 Student Management System developed using Laravel Breeze, Inertia.j
 - Export student data as Excel
 - Notification and validation messages
 - Responsive user interface
+- Search Student Using Id, Name or Age 
 
 
 ## Technologies Used
